@@ -1,0 +1,6 @@
+{
+  "name": "NAUTILUS — Maritime Intelligence Command Platform",
+  "description": "Enterprise-grade real-time maritime vessel intelligence, AIS tracking, AML sanctions screening, KYC compliance, and AI-powered risk command platform.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

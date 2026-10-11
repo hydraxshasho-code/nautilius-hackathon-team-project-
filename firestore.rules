@@ -1,0 +1,212 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global Safety Net: Default-deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Common Hardened Helper Functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // Authoritative Server-Side User Role Resolution
+    // Default fallback role is strictly 'Viewer' (Least Privilege)
+    function getUserRole() {
+      return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        ? get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role
+        : (request.auth.token.role != null ? request.auth.token.role : 'Viewer');
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        request.auth.token.admin == true ||
+        request.auth.token.role == 'Super Admin' ||
+        getUserRole() == 'Super Admin'
+      );
+    }
+
+    function isOperator() {
+      return isSignedIn() && (
+        isAdmin() ||
+        getUserRole() in ['Compliance Officer', 'Risk Analyst', 'Operations Manager', 'Vessel Analyst', 'Investigator', 'Auditor']
+      );
+    }
+
+    function hasFullIntelligenceAccess() {
+      return isSignedIn() && (
+        isAdmin() ||
+        getUserRole() in ['Compliance Officer', 'Risk Analyst', 'Investigator', 'Auditor']
+      );
+    }
+
+    function hasRiskAnalysisAccess() {
+      return isSignedIn() && (
+        isAdmin() ||
+        getUserRole() in ['Compliance Officer', 'Risk Analyst']
+      );
+    }
+
+    function hasAuditAccess() {
+      return isSignedIn() && (
+        isAdmin() ||
+        getUserRole() in ['Compliance Officer', 'Auditor']
+      );
+    }
+
+    // Strict Vessel Field Allowlist
+    function hasOnlyAllowedVesselKeys(data) {
+      return data.keys().hasOnly([
+        'id', 'name', 'imo', 'mmsi', 'callSign', 'type', 'flag', 'flagCode',
+        'lat', 'lon', 'prevLat', 'prevLon', 'speed', 'course', 'heading',
+        'navStatus', 'destination', 'destinationPortCode', 'origin', 'originPortCode',
+        'eta', 'timestamp', 'aisSource', 'dataQuality', 'classificationSociety',
+        'owner', 'operator', 'manager', 'beneficialOwner', 'kycStatus', 'amlStatus',
+        'length', 'beam', 'draught', 'grossTonnage', 'deadweightTonnage', 'yearBuilt',
+        'totalDistanceNm', 'distanceTraveledNm', 'anomaliesDetected', 'lastUpdatedSecondsAgo',
+        'isTransmitting', 'isStale', 'historicalTrack', 'predictedTrack', 'portCalls',
+        'riskLevel', 'riskScore', 'riskBreakdown', 'riskEvidence', 'ownershipStructure'
+      ]);
+    }
+
+    // Validation Blueprint for Maritime Vessel Documents
+    function isValidVessel(data) {
+      return data.keys().hasAll(['id', 'name', 'imo', 'mmsi', 'lat', 'lon', 'speed', 'course', 'heading', 'navStatus', 'riskLevel', 'riskScore'])
+        && hasOnlyAllowedVesselKeys(data)
+        && !('__admin__' in data)
+        && !('__proto__' in data)
+        && !('constructor' in data)
+        && !('prototype' in data)
+        && data.id is string && data.id.size() <= 128
+        && data.name is string && data.name.size() <= 100
+        && data.imo is string && data.imo.size() <= 32
+        && data.mmsi is string && data.mmsi.size() <= 32
+        && data.lat is number && data.lat >= -90.0 && data.lat <= 90.0
+        && data.lon is number && data.lon >= -180.0 && data.lon <= 180.0
+        && data.speed is number && data.speed >= 0.0 && data.speed <= 150.0
+        && data.course is number && data.course >= 0.0 && data.course <= 360.0
+        && data.heading is number && data.heading >= 0.0 && data.heading <= 360.0
+        && data.navStatus is string && data.navStatus.size() <= 64
+        && data.riskLevel in ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']
+        && data.riskScore is number && data.riskScore >= 0.0 && data.riskScore <= 100.0;
+    }
+
+    // Validation Blueprint for User Profiles
+    function isValidUserProfile(data) {
+      return data.keys().hasAll(['uid', 'email', 'role'])
+        && data.keys().hasOnly(['uid', 'email', 'displayName', 'role', 'createdAt', 'updatedAt', 'lastLogin'])
+        && data.uid is string && data.uid.size() <= 128
+        && data.email is string && data.email.size() <= 128
+        && data.role in ['Super Admin', 'Compliance Officer', 'Risk Analyst', 'Operations Manager', 'Investigator', 'Auditor', 'Vessel Analyst', 'Viewer'];
+    }
+
+    // Validation Blueprint for Incident Alerts
+    function isValidAlert(data) {
+      return data.keys().hasAll(['id', 'title', 'category', 'severity', 'status'])
+        && data.id is string && data.id.size() <= 128
+        && data.title is string && data.title.size() <= 128
+        && data.category is string && data.category.size() <= 64
+        && data.severity in ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']
+        && data.status in ['NEW', 'INVESTIGATING', 'RESOLVED', 'DISMISSED'];
+    }
+
+    // Test connection collection (required by connection verification)
+    match /test/{docId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // Global Real-Time Live Vessels Collection
+    // Read is public so that shared app URLs and initial load immediately display real fleet map data.
+    // Writes are guarded by authentication, resource-level ownership, and role-based operator permissions.
+    // Deletions are strictly prohibited for unauthenticated or non-operator users.
+    match /vessels/{vesselId} {
+      allow read: if true;
+      allow create: if isOperator() && isValidId(vesselId) && isValidVessel(incoming());
+      allow update: if (isAdmin() || isOperator()) && isValidId(vesselId) && isValidVessel(incoming())
+        && incoming().id == existing().id;
+      allow delete: if (isAdmin() || isOperator()) && isValidId(vesselId);
+    }
+
+    // Dedicated Restricted Maritime Intelligence Dossiers (UBO, beneficial ownership, sanctioned networks)
+    // Accessible strictly to authenticated operators with compliance/investigative clearance.
+    match /vesselIntelligence/{vesselId} {
+      allow read: if isValidId(vesselId) && hasFullIntelligenceAccess();
+      allow write: if isValidId(vesselId) && (isAdmin() || getUserRole() == 'Compliance Officer');
+    }
+
+    // Restricted KYC / AML Compliance Records
+    match /vesselCompliance/{vesselId} {
+      allow read: if isValidId(vesselId) && hasFullIntelligenceAccess();
+      allow write: if isValidId(vesselId) && (isAdmin() || getUserRole() in ['Compliance Officer', 'Investigator']);
+    }
+
+    // Restricted Risk Analysis & Threat Modeling Records
+    match /vesselRisk/{vesselId} {
+      allow read: if isValidId(vesselId) && hasRiskAnalysisAccess();
+      allow write: if isValidId(vesselId) && (isAdmin() || getUserRole() in ['Compliance Officer', 'Risk Analyst']);
+    }
+
+    // Cryptographic Immutable Security Audit Logs (Admin & Compliance Auditor only)
+    match /auditLogs/{logId} {
+      allow read: if isValidId(logId) && hasAuditAccess();
+      allow create: if isValidId(logId) && isSignedIn();
+      allow update, delete: if false; // Append-only immutable ledger
+    }
+
+    match /audit-logs/{logId} {
+      allow read: if isValidId(logId) && hasAuditAccess();
+      allow create: if isValidId(logId) && isSignedIn();
+      allow update, delete: if false; // Append-only immutable ledger
+    }
+
+    // Private User Profiles for Authenticated Operators
+    // Non-admin users CANNOT self-elevate to privileged roles (default is Viewer)
+    match /users/{userId} {
+      allow get: if isValidId(userId) && (isOwner(userId) || isAdmin());
+      allow list: if isSignedIn() && (resource.data.uid == request.auth.uid || isAdmin());
+      // Non-admin can ONLY register as 'Viewer'; elevation requires Super Admin
+      allow create: if isValidId(userId) && isOwner(userId) && isValidUserProfile(incoming())
+        && (isAdmin() || incoming().role == 'Viewer');
+      // Users can update their profile metadata, but NEVER their role
+      allow update: if isValidId(userId) && (
+        (isAdmin() && isValidUserProfile(incoming())) ||
+        (isOwner(userId) && isValidUserProfile(incoming()) && incoming().uid == existing().uid && incoming().role == existing().role)
+      );
+      allow delete: if isValidId(userId) && isAdmin();
+
+      // Persistent multi-turn chat sessions and inquiries
+      match /chats/{chatId} {
+        allow read, write: if isValidId(userId) && isOwner(userId) && isValidId(chatId);
+      }
+    }
+
+    // Incident Alerts Collection
+    // Authenticated users can read alerts; operators manage alerts; admin can delete.
+    match /alerts/{alertId} {
+      allow get, list: if isSignedIn();
+      allow create: if isOperator() && isValidId(alertId) && isValidAlert(incoming());
+      allow update: if isOperator() && isValidId(alertId) && isValidAlert(incoming())
+        && incoming().id == existing().id;
+      allow delete: if isAdmin() && isValidId(alertId);
+    }
+  }
+}

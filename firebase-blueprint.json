@@ -1,0 +1,330 @@
+{
+  "entities": {
+    "Vessel": {
+      "title": "Vessel",
+      "description": "Real-time vessel data including maritime identification, spatial navigation telemetry, risk analysis, and corporate compliance.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique vessel document identifier",
+          "maxLength": 128
+        },
+        "name": {
+          "type": "string",
+          "description": "Registered ship name",
+          "maxLength": 100
+        },
+        "imo": {
+          "type": "string",
+          "description": "International Maritime Organization number (7 digits)",
+          "maxLength": 16
+        },
+        "mmsi": {
+          "type": "string",
+          "description": "Maritime Mobile Service Identity (9 digits)",
+          "maxLength": 16
+        },
+        "callSign": {
+          "type": "string",
+          "description": "Radio call sign",
+          "maxLength": 32
+        },
+        "type": {
+          "type": "string",
+          "description": "Vessel classification type",
+          "maxLength": 64
+        },
+        "flag": {
+          "type": "string",
+          "description": "Flag state registry country",
+          "maxLength": 64
+        },
+        "flagCode": {
+          "type": "string",
+          "description": "ISO country code for flag state",
+          "maxLength": 8
+        },
+        "lat": {
+          "type": "number",
+          "description": "Current latitude coordinate"
+        },
+        "lon": {
+          "type": "number",
+          "description": "Current longitude coordinate"
+        },
+        "prevLat": {
+          "type": "number",
+          "description": "Previous latitude coordinate"
+        },
+        "prevLon": {
+          "type": "number",
+          "description": "Previous longitude coordinate"
+        },
+        "speed": {
+          "type": "number",
+          "description": "Speed Over Ground (knots)"
+        },
+        "course": {
+          "type": "number",
+          "description": "Course Over Ground (degrees)"
+        },
+        "heading": {
+          "type": "number",
+          "description": "True heading (degrees)"
+        },
+        "navStatus": {
+          "type": "string",
+          "description": "Navigation status",
+          "maxLength": 64
+        },
+        "destination": {
+          "type": "string",
+          "description": "Declared destination port",
+          "maxLength": 100
+        },
+        "destinationPortCode": {
+          "type": "string",
+          "description": "UN/LOCODE port code for destination",
+          "maxLength": 16
+        },
+        "origin": {
+          "type": "string",
+          "description": "Origin port",
+          "maxLength": 100
+        },
+        "originPortCode": {
+          "type": "string",
+          "description": "UN/LOCODE port code for origin",
+          "maxLength": 16
+        },
+        "eta": {
+          "type": "string",
+          "description": "Estimated time of arrival ISO string",
+          "maxLength": 64
+        },
+        "timestamp": {
+          "type": "string",
+          "description": "ISO timestamp of last transmission",
+          "maxLength": 64
+        },
+        "aisSource": {
+          "type": "string",
+          "description": "Source receiver of AIS telemetry",
+          "maxLength": 32
+        },
+        "dataQuality": {
+          "type": "string",
+          "description": "Telemetry signal quality level",
+          "maxLength": 32
+        },
+        "lastUpdatedSecondsAgo": {
+          "type": "number",
+          "description": "Elapsed seconds since last broadcast"
+        },
+        "riskLevel": {
+          "type": "string",
+          "description": "Maritime risk tier (LOW, MEDIUM, HIGH, CRITICAL)",
+          "maxLength": 16
+        },
+        "riskScore": {
+          "type": "number",
+          "description": "Composite risk score out of 100"
+        },
+        "isTransmitting": {
+          "type": "boolean",
+          "description": "Whether transponder is active"
+        },
+        "isStale": {
+          "type": "boolean",
+          "description": "Whether telemetry data has timed out"
+        },
+        "length": {
+          "type": "number",
+          "description": "Vessel overall length in meters"
+        },
+        "beam": {
+          "type": "number",
+          "description": "Vessel beam width in meters"
+        },
+        "draught": {
+          "type": "number",
+          "description": "Current water draught in meters"
+        },
+        "grossTonnage": {
+          "type": "number",
+          "description": "Gross tonnage"
+        },
+        "deadweightTonnage": {
+          "type": "number",
+          "description": "Deadweight tonnage"
+        },
+        "yearBuilt": {
+          "type": "number",
+          "description": "Year of vessel construction"
+        },
+        "classificationSociety": {
+          "type": "string",
+          "description": "Maritime classification bureau",
+          "maxLength": 64
+        },
+        "owner": {
+          "type": "string",
+          "description": "Registered owning entity",
+          "maxLength": 128
+        },
+        "operator": {
+          "type": "string",
+          "description": "Commercial operator",
+          "maxLength": 128
+        },
+        "manager": {
+          "type": "string",
+          "description": "Technical fleet manager",
+          "maxLength": 128
+        },
+        "beneficialOwner": {
+          "type": "string",
+          "description": "Ultimate beneficial owner",
+          "maxLength": 128
+        },
+        "kycStatus": {
+          "type": "string",
+          "description": "KYC compliance verification status",
+          "maxLength": 32
+        },
+        "amlStatus": {
+          "type": "string",
+          "description": "Anti-Money Laundering screening status",
+          "maxLength": 32
+        },
+        "totalDistanceNm": {
+          "type": "number",
+          "description": "Total route distance in nautical miles"
+        },
+        "distanceTraveledNm": {
+          "type": "number",
+          "description": "Distance traveled in nautical miles"
+        },
+        "anomaliesDetected": {
+          "type": "number",
+          "description": "Count of anomalies recorded"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "imo",
+        "mmsi",
+        "lat",
+        "lon",
+        "speed",
+        "course",
+        "heading",
+        "navStatus",
+        "riskLevel",
+        "riskScore"
+      ]
+    },
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Authenticated user profile for maritime personnel",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "Firebase Auth UID",
+          "maxLength": 128
+        },
+        "displayName": {
+          "type": "string",
+          "description": "Full operator name",
+          "maxLength": 128
+        },
+        "email": {
+          "type": "string",
+          "description": "User email address",
+          "maxLength": 128
+        },
+        "role": {
+          "type": "string",
+          "description": "Assigned operational role",
+          "maxLength": 64
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Account registration timestamp",
+          "maxLength": 64
+        }
+      },
+      "required": ["uid", "email", "role"]
+    },
+    "IncidentAlert": {
+      "title": "IncidentAlert",
+      "description": "Tactical maritime incident and regulatory alerts",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique alert identifier",
+          "maxLength": 128
+        },
+        "vesselId": {
+          "type": "string",
+          "description": "Referenced vessel identifier",
+          "maxLength": 128
+        },
+        "vesselName": {
+          "type": "string",
+          "description": "Referenced vessel name",
+          "maxLength": 100
+        },
+        "type": {
+          "type": "string",
+          "description": "Category of incident alert",
+          "maxLength": 64
+        },
+        "severity": {
+          "type": "string",
+          "description": "Alert severity level",
+          "maxLength": 16
+        },
+        "title": {
+          "type": "string",
+          "description": "Brief alert summary",
+          "maxLength": 128
+        },
+        "description": {
+          "type": "string",
+          "description": "Full contextual alert description",
+          "maxLength": 512
+        },
+        "status": {
+          "type": "string",
+          "description": "Resolution status",
+          "maxLength": 32
+        },
+        "timestamp": {
+          "type": "string",
+          "description": "Alert creation timestamp",
+          "maxLength": 64
+        }
+      },
+      "required": ["id", "type", "severity", "title", "status"]
+    }
+  },
+  "firestore": {
+    "/vessels/{vesselId}": {
+      "schema": "Vessel",
+      "description": "Collection of global live and registered maritime vessels permanently tracked across all connected users."
+    },
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "Private user profiles for authenticated watch officers and compliance operators."
+    },
+    "/alerts/{alertId}": {
+      "schema": "IncidentAlert",
+      "description": "Tactical incident alerts and sanctions compliance notifications."
+    }
+  }
+}
